@@ -29,7 +29,7 @@ jobs:
         run: ctest --test-dir ${{github.workspace}}/build/tests/ctest -C Release -V
 
       - name: Install Debug
-        run: cmake --install ${{github.workspace}}/build/tests/ctest --prefix ${{github.workspace}}/install --config Debug --component vmdio
+        run: cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install --config Debug --component vmdio
 
       - name: Install Release
         run: cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install --config Release --component vmdio
