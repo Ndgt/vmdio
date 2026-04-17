@@ -1,0 +1,51 @@
+name: Build C++ Library
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake -S . -B ${{github.workspace}}/build -A x64 -T v143 -DBUILD_CTEST=ON
+
+      - name: Build Debug
+        run: cmake --build ${{github.workspace}}/build --config Debug
+
+      - name: Build Release
+        run: cmake --build ${{github.workspace}}/build --config Release
+
+      - name: Run tests on Debug
+        run: ctest --test-dir ${{github.workspace}}/build -C Debug -V
+
+      - name: Run tests on Release
+        run: ctest --test-dir ${{github.workspace}}/build/tests/ctest -C Release -V
+
+      - name: Install Debug
+        run: cmake --install ${{github.workspace}}/build/tests/ctest --prefix ${{github.workspace}}/install --config Debug --component vmdio
+
+      - name: Install Release
+        run: cmake --install ${{github.workspace}}/build --prefix ${{github.workspace}}/install --config Release --component vmdio
+
+      - name: Copy LICENSE file
+        run: |
+          Copy-Item -Path ${{github.workspace}}/LICENSE.txt -Destination ${{github.workspace}}/install/LICENSE.txt
+
+      - name: Extract Project version
+        id: extract_version
+        run: |
+          $Version=Get-Content -Path ${{github.workspace}}/VERSION.txt
+          "version=$Version" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vmdio-v${{steps.extract_version.outputs.version}}
+          path: ${{github.workspace}}/install/

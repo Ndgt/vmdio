@@ -1,0 +1,41 @@
+name: Build Documentation
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract Project version
+        id: extract_version
+        run: |
+          $Version=Get-Content -Path ${{github.workspace}}/VERSION.txt
+          "version=$Version" >> $env:GITHUB_OUTPUT
+
+      - name: Install Doxygen
+        run: |
+          $utl = "https://github.com/doxygen/doxygen/releases/latest/download/doxygen-1.16.1.windows.x64.bin.zip"
+          Invoke-WebRequest -Uri $utl -OutFile doxygen.zip
+          Expand-Archive -Path doxygen.zip -DestinationPath doxygen
+          echo "$pwd\doxygen" >> $env:GITHUB_PATH
+
+      - name: Install Graphviz
+        run: choco install graphviz -y
+
+      - name: Build Documentation
+        run: |
+            New-Item -Path ${{github.workspace}}/docs/build -ItemType Directory -Force
+            doxygen ${{github.workspace}}/docs/Doxyfile
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vmdio-v${{steps.extract_version.outputs.version}}-docs
+          path: ${{github.workspace}}/docs/build

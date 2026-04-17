@@ -1,0 +1,21 @@
+# Doxyfile 1.16.1
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = vmdio
+EXTRACT_ALL            = YES
+OUTPUT_DIRECTORY       = docs/build
+CREATE_SUBDIRS         = YES
+STRIP_FROM_PATH        = src docs
+INLINE_SIMPLE_STRUCTS  = YES
+SORT_MEMBER_DOCS       = NO
+INPUT                  = src/vmdio docs/mainpage.md docs/technical_architecture.md
+FILE_PATTERNS          = *.h *.md
+USE_MDFILE_AS_MAINPAGE = docs/mainpage.md
+HTML_HEADER            = docs/header.html
+HTML_FOOTER            = docs/footer.html
+HTML_EXTRA_STYLESHEET  = docs/customstyle.css
+GENERATE_TREEVIEW      = NO
+GENERATE_LATEX         = NO
+HAVE_DOT               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES

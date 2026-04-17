@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyvmdio"
+dynamic = ["version"]
+description = "Python bindings for vmdio"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "BSD-3-Clause"
+license-files = [
+  "LICENSE.txt",
+  "pybind11/LICENSE"
+]
+authors = [
+  {name = "Ndgt"}
+]
+
+[project.urls]
+Repository = "https://github.com/Ndgt/vmdio"
+
+[tool.setuptools.dynamic]
+version = {attr = "pyvmdio.__version__"}
