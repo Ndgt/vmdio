@@ -131,7 +131,7 @@ if(BUILD_PYTHON_WRAPPER)
         FetchContent_Declare(
             pybind11
             GIT_REPOSITORY https://github.com/pybind/pybind11.git
-            GIT_TAG        1b4990838904501de7110d27e96c0a4152029156 # Release v3.0.3
+            GIT_TAG        d03662f0984f652b60e7ddce53d3868002275197 # Release v3.0.4
         )
 
         FetchContent_MakeAvailable(pybind11)
