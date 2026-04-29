@@ -4,10 +4,15 @@ from . import camera_edit
 from . import encoding
 from . import exceptions
 from . import model_edit
+from . import vmd_string
+
+from .vmd_string import VMDString
 
 __all__ = [
+    "VMDString",
     "camera_edit",
     "encoding",
     "exceptions",
-    "model_edit"
+    "model_edit",
+    "vmd_string",
 ]

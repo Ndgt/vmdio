@@ -3,6 +3,10 @@ import math
 FLOAT_TOL = 1e-5
 
 
+def assert_vmd_string_equal(s1, s2):
+    assert s1.toShiftJIS() == s2.toShiftJIS()
+
+
 def assert_control_point_set_equal(cp1, cp2):
     assert cp1.x1 == cp2.x1
     assert cp1.y1 == cp2.y1
@@ -12,7 +16,7 @@ def assert_control_point_set_equal(cp1, cp2):
 
 def assert_motion_frame_equal(f1, f2):
     assert f1.frameNumber == f2.frameNumber
-    assert f1.boneName == f2.boneName
+    assert_vmd_string_equal(f1.boneName, f2.boneName)
 
     assert math.isclose(f1.position.x, f2.position.x, abs_tol=FLOAT_TOL)
     assert math.isclose(f1.position.y, f2.position.y, abs_tol=FLOAT_TOL)
@@ -31,7 +35,7 @@ def assert_motion_frame_equal(f1, f2):
 
 def assert_morph_frame_equal(f1, f2):
     assert f1.frameNumber == f2.frameNumber
-    assert f1.morphName == f2.morphName
+    assert_vmd_string_equal(f1.morphName, f2.morphName)
     assert math.isclose(f1.value, f2.value, abs_tol=FLOAT_TOL)
 
 
@@ -41,7 +45,7 @@ def assert_visible_ik_frame_equal(f1, f2):
     assert len(f1.ikDataList) == len(f2.ikDataList)
 
     for ik1, ik2 in zip(f1.ikDataList, f2.ikDataList):
-        assert ik1.ikBoneName == ik2.ikBoneName
+        assert_vmd_string_equal(ik1.ikBoneName, ik2.ikBoneName)
         assert ik1.ikState == ik2.ikState
 
 
