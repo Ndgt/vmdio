@@ -38,8 +38,9 @@ option(BUILD_PYTHON_WRAPPER "Build Python Wrapper module and wheel" OFF)
 # ------------------------------------
 add_library(vmdio STATIC
     src/vmdio/camera_edit.cpp
-    src/vmdio/encoding.cpp
     src/vmdio/model_edit.cpp
+    src/vmdio/vmd_encoding.cpp
+    src/vmdio/vmd_string.cpp
 )
 
 # Set UTF-8 encoding
@@ -50,9 +51,10 @@ target_sources(vmdio PUBLIC
     BASE_DIRS src
     FILES
         src/vmdio/camera_edit.h
-        src/vmdio/encoding.h
-        src/vmdio/exceptions.h
         src/vmdio/model_edit.h
+        src/vmdio/vmd_encoding.h
+        src/vmdio/vmd_exceptions.h
+        src/vmdio/vmd_string.h
 )
 
 set(INSTALL_CONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/vmdio")

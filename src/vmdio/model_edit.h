@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "vmd_string.h"
+
 /**
  * @namespace vmdio::model_edit
  * @brief Namespace for all data structures and functions related to model, morph, and visible IK
@@ -102,7 +104,7 @@ namespace vmdio::model_edit
     struct MotionFrame
     {
         ///< Name of the bone
-        std::string boneName;
+        vmdio::VMDString boneName;
 
         ///< Frame number
         uint32_t frameNumber = 0;
@@ -129,7 +131,7 @@ namespace vmdio::model_edit
     struct MorphFrame
     {
         ///< Name of the morph
-        std::string morphName;
+        vmdio::VMDString morphName;
 
         ///< Frame number
         uint32_t frameNumber = 0;
@@ -145,7 +147,7 @@ namespace vmdio::model_edit
     struct IKData
     {
         ///< Name of the IK bone
-        std::string ikBoneName;
+        vmdio::VMDString ikBoneName;
 
         ///< IK state (default: ON)
         IKState ikState = IKState::ON;
@@ -177,7 +179,7 @@ namespace vmdio::model_edit
     struct VMDData
     {
         ///< Name of the model
-        std::string modelName;
+        vmdio::VMDString modelName;
 
         ///< List of motion frames
         std::vector<MotionFrame> motionFrames;

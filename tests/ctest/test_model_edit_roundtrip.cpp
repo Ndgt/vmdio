@@ -1,5 +1,5 @@
 #include <vmdio/model_edit.h>
-#include <vmdio/exceptions.h>
+#include <vmdio/vmd_exceptions.h>
 
 #include "test_base.h"
 
@@ -21,7 +21,7 @@ inline bool checkMotionFrame(const vmd::MotionFrame &pFrame1, const vmd::MotionF
         return false;
 
     // Check bone name
-    if (pFrame1.boneName != pFrame2.boneName)
+    if (!test_base::equalVMDString(pFrame1.boneName, pFrame2.boneName))
         return false;
 
     // Check position
@@ -54,7 +54,7 @@ inline bool checkMorphFrame(const vmd::MorphFrame &pFrame1, const vmd::MorphFram
         return false;
 
     // Check morph name
-    if (pFrame1.morphName != pFrame2.morphName)
+    if (!test_base::equalVMDString(pFrame1.morphName, pFrame2.morphName))
         return false;
 
     // Check value
@@ -85,7 +85,7 @@ inline bool checkVisibleIKFrame(
         const vmd::IKData &lIKData1 = pFrame1.ikDataList[i];
         const vmd::IKData &lIKData2 = pFrame2.ikDataList[i];
 
-        if (lIKData1.ikBoneName != lIKData2.ikBoneName ||
+        if (!test_base::equalVMDString(lIKData1.ikBoneName, lIKData2.ikBoneName) ||
             lIKData1.ikState != lIKData2.ikState)
             return false;
     }
@@ -111,7 +111,7 @@ TEST_F(ModelEditRoundtripTest, ReadWriteDataAndConsistency)
     EXPECT_NO_THROW(lReadBackData = vmd::readVMD(mTempFilePath));
 
     // Check if the model name is the same
-    EXPECT_EQ(lOriginalData.modelName, lReadBackData.modelName);
+    EXPECT_TRUE(test_base::equalVMDString(lOriginalData.modelName, lReadBackData.modelName));
 
     // Check if the frame counts are the same
     EXPECT_EQ(lOriginalData.motionFrames.size(), lReadBackData.motionFrames.size());

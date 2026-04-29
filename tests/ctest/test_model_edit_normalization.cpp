@@ -1,5 +1,5 @@
 #include <vmdio/model_edit.h>
-#include <vmdio/exceptions.h>
+#include <vmdio/vmd_exceptions.h>
 
 #include "test_base.h"
 
@@ -17,10 +17,10 @@ TEST_F(ModelEditNormalizationTest, NonUnitQuaternionNormalization)
     vmd::VMDData lOriginalData;
     vmd::VMDData lReadBackData;
 
-    lOriginalData.modelName = "vmdio-test";
+    lOriginalData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MotionFrame lFrame;
-    lFrame.boneName = "ボーン1";
+    lFrame.boneName = test_base::makeVMDString(u8"ボーン1");
     lFrame.rotation.qx = 0.0f;
     lFrame.rotation.qy = 0.0f;
     lFrame.rotation.qz = 0.0f;

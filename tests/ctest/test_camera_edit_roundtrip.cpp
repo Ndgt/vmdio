@@ -1,5 +1,5 @@
 #include <vmdio/camera_edit.h>
-#include <vmdio/exceptions.h>
+#include <vmdio/vmd_exceptions.h>
 
 #include "test_base.h"
 

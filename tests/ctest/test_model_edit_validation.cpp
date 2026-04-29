@@ -1,5 +1,5 @@
 #include <vmdio/model_edit.h>
-#include <vmdio/exceptions.h>
+#include <vmdio/vmd_exceptions.h>
 
 #include "test_base.h"
 
@@ -21,19 +21,29 @@ TEST_F(ModelEditValidationTest, EmptyModelName)
     EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::InvalidFieldValueError);
 }
 
+// TEST: ModelNameTooLong
+// Check if InvalidFieldValueError is properly thrown when modelName exceeds the VMD field limit
+TEST_F(ModelEditValidationTest, ModelNameTooLong)
+{
+    vmd::VMDData lBadData;
+    lBadData.modelName = test_base::makeVMDString("123456789012345678901");
+
+    EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::InvalidFieldValueError);
+}
+
 // TEST: FrameCountOverflow
 // Check if FrameOverflowError is properly thrown when the number of frames exceeds
 // the maximum limit
 TEST_F(ModelEditValidationTest, FrameCountOverflow)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     // Add more than MAX_FRAME_COUNT(600,000) motion frames to trigger the overflow error
     for (size_t i = 0; i < 600001; ++i)
     {
         vmd::MotionFrame lFrame;
-        lFrame.boneName = "ボーン1";
+        lFrame.boneName = test_base::makeVMDString(u8"ボーン1");
         lFrame.frameNumber = static_cast<uint32_t>(i);
         lBadData.motionFrames.push_back(lFrame);
     }
@@ -46,17 +56,17 @@ TEST_F(ModelEditValidationTest, FrameCountOverflow)
 TEST_F(ModelEditValidationTest, MotionFrameConflict)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MotionFrame lFrame1;
     lFrame1.frameNumber = 10;
-    lFrame1.boneName = "ボーン1";
+    lFrame1.boneName = test_base::makeVMDString(u8"ボーン1");
     lBadData.motionFrames.push_back(lFrame1);
 
     // Conflict: same bone name and frame number as lFrame1
     vmd::MotionFrame lFrame2;
     lFrame2.frameNumber = 10;
-    lFrame2.boneName = "ボーン1";
+    lFrame2.boneName = test_base::makeVMDString(u8"ボーン1");
     lBadData.motionFrames.push_back(lFrame2);
 
     EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::FrameConflictError);
@@ -67,12 +77,27 @@ TEST_F(ModelEditValidationTest, MotionFrameConflict)
 TEST_F(ModelEditValidationTest, EmptyBoneName)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MotionFrame lFrame;
 
     // Empty bone name
-    lFrame.boneName = "";
+    lFrame.boneName = test_base::makeVMDString("");
+
+    lBadData.motionFrames.push_back(lFrame);
+
+    EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::InvalidFieldValueError);
+}
+
+// TEST: BoneNameTooLong
+// Check if InvalidFieldValueError is properly thrown when boneName exceeds the VMD field limit
+TEST_F(ModelEditValidationTest, BoneNameTooLong)
+{
+    vmd::VMDData lBadData;
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
+
+    vmd::MotionFrame lFrame;
+    lFrame.boneName = test_base::makeVMDString("1234567890123456");
 
     lBadData.motionFrames.push_back(lFrame);
 
@@ -85,10 +110,10 @@ TEST_F(ModelEditValidationTest, EmptyBoneName)
 TEST_F(ModelEditValidationTest, ZeroQuaternion)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MotionFrame lFrame;
-    lFrame.boneName = "ボーン1";
+    lFrame.boneName = test_base::makeVMDString(u8"ボーン1");
 
     // Set the rotation quaternion to a zero quaternion
     lFrame.rotation = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -104,10 +129,10 @@ TEST_F(ModelEditValidationTest, ZeroQuaternion)
 TEST_F(ModelEditValidationTest, InvalidMotionInterpolation)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MotionFrame lFrame;
-    lFrame.boneName = "ボーン1";
+    lFrame.boneName = test_base::makeVMDString(u8"ボーン1");
 
     // Invalid interpolation control point value (greater than 127)
     lFrame.interpolation.xPos.x1 = 128;
@@ -122,17 +147,17 @@ TEST_F(ModelEditValidationTest, InvalidMotionInterpolation)
 TEST_F(ModelEditValidationTest, MorphFrameConflict)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MorphFrame lFrame1;
     lFrame1.frameNumber = 20;
-    lFrame1.morphName = "シェイプキー1";
+    lFrame1.morphName = test_base::makeVMDString(u8"シェイプキー1");
     lBadData.morphFrames.push_back(lFrame1);
 
     // Conflict: same morph name and frame number as lFrame1
     vmd::MorphFrame lFrame2;
     lFrame2.frameNumber = 20;
-    lFrame2.morphName = "シェイプキー1";
+    lFrame2.morphName = test_base::makeVMDString(u8"シェイプキー1");
     lBadData.morphFrames.push_back(lFrame2);
 
     EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::FrameConflictError);
@@ -143,12 +168,12 @@ TEST_F(ModelEditValidationTest, MorphFrameConflict)
 TEST_F(ModelEditValidationTest, EmptyMorphName)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::MorphFrame lFrame;
 
     // Empty morph name
-    lFrame.morphName = "";
+    lFrame.morphName = test_base::makeVMDString("");
 
     lBadData.morphFrames.push_back(lFrame);
 
@@ -160,7 +185,7 @@ TEST_F(ModelEditValidationTest, EmptyMorphName)
 TEST_F(ModelEditValidationTest, VisibleIKFrameConflict)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::VisibleIKFrame lFrame1;
     lFrame1.frameNumber = 30;
@@ -180,7 +205,7 @@ TEST_F(ModelEditValidationTest, VisibleIKFrameConflict)
 TEST_F(ModelEditValidationTest, InvalidVisibilityValue)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::VisibleIKFrame lFrame;
 
@@ -198,14 +223,14 @@ TEST_F(ModelEditValidationTest, InvalidVisibilityValue)
 TEST_F(ModelEditValidationTest, EmptyIKBoneName)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::VisibleIKFrame lFrame;
 
     vmd::IKData lIKData;
 
     // Empty IK bone name
-    lIKData.ikBoneName = "";
+    lIKData.ikBoneName = test_base::makeVMDString("");
 
     lFrame.ikDataList.push_back(lIKData);
     lBadData.visibleIKFrames.push_back(lFrame);
@@ -219,12 +244,12 @@ TEST_F(ModelEditValidationTest, EmptyIKBoneName)
 TEST_F(ModelEditValidationTest, InvalidIKState)
 {
     vmd::VMDData lBadData;
-    lBadData.modelName = "vmdio-test";
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
 
     vmd::VisibleIKFrame lFrame;
 
     vmd::IKData lIKData;
-    lIKData.ikBoneName = "ボーンIK";
+    lIKData.ikBoneName = test_base::makeVMDString(u8"ボーンIK");
 
     // Invalid IK state by casting an out-of-range value
     lIKData.ikState = static_cast<vmd::IKState>(99);

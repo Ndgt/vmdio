@@ -3,7 +3,7 @@
 //   ModelMotionImport <path to vmd file> > output.txt
 
 #include <vmdio/model_edit.h>
-#include <vmdio/exceptions.h>
+#include <vmdio/vmd_exceptions.h>
 
 #include <exception>
 #include <filesystem>
@@ -16,7 +16,7 @@ namespace vmd_except = vmdio::exceptions;
 void printSummaryData(const vmd::VMDData &pVmdData)
 {
     std::cout << "\n=== Summary of imported data ===\n";
-    std::cout << "Model Name: " << pVmdData.modelName << "\n";
+    std::cout << "Model Name: " << pVmdData.modelName.toUTF8ForDisplay() << "\n";
     std::cout << "Motion Frame Count: " << pVmdData.motionFrames.size() << "\n";
     std::cout << "Morph Frame Count: " << pVmdData.morphFrames.size() << "\n";
     std::cout << "Visible IK Frame Count: " << pVmdData.visibleIKFrames.size() << "\n";
@@ -36,7 +36,7 @@ void printMotionFrames(const vmd::VMDData &pVmdData)
         vmd::MotionInterpolation lInterp = lMotionFrame.interpolation;
 
         std::cout << "Motion Frame: " << lMotionFrame.frameNumber << "\n";
-        std::cout << "  Bone Name: " << lMotionFrame.boneName << "\n";
+        std::cout << "  Bone Name: " << lMotionFrame.boneName.toUTF8ForDisplay() << "\n";
         std::cout << "  Position: (" << lPos.x << ", " << lPos.y << ", " << lPos.z << ")\n";
         std::cout << "  Rotation: (" << lRot.qx << ", " << lRot.qy << ", " << lRot.qz << ", " << lRot.qw << ")\n";
         std::cout << "  Interpolation: " << "\n";
@@ -58,7 +58,7 @@ void printMorphFrames(const vmd::VMDData &pVmdData)
     for (const auto &lMorphFrame : pVmdData.morphFrames)
     {
         std::cout << "Morph Frame: " << lMorphFrame.frameNumber << "\n";
-        std::cout << "  Morph Name: " << lMorphFrame.morphName << "\n";
+        std::cout << "  Morph Name: " << lMorphFrame.morphName.toUTF8ForDisplay() << "\n";
         std::cout << "  Value: " << lMorphFrame.value << "\n";
         std::cout << "\n";
     }
@@ -109,7 +109,7 @@ void printVisibleIKFrames(const vmd::VMDData &pVmdData)
                 break;
             }
 
-            std::cout << "    IK Bone Name: " << lIKData.ikBoneName
+            std::cout << "    IK Bone Name: " << lIKData.ikBoneName.toUTF8ForDisplay()
                       << ", IK State: " << lIKStateStr << "\n";
         }
 

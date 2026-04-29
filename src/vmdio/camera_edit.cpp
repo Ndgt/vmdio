@@ -6,8 +6,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include "encoding.h"
-#include "exceptions.h"
+#include "vmd_exceptions.h"
 #include "private/vmd_constants.h"
 #include "private/vmd_io_utils.h"
 
@@ -401,14 +400,18 @@ namespace vmdio::camera_edit
             }
 
             // Read model name
-            std::string lModelName = internal::readStringField(
-                lFile, internal::VMD_MODEL_NAME_HEADER_SIZE, "model name");
+            VMDString lModelName = internal::readStringField(
+                lFile, internal::VMD_MODEL_NAME_HEADER_SIZE);
+
+            const VMDString lCameraEditModelName =
+                VMDString::fromUTF8(internal::VMD_MODEL_NAME_CAMERA_EDIT);
 
             // Validate model name
-            if (lModelName != internal::VMD_MODEL_NAME_CAMERA_EDIT)
+            if (lModelName.toShiftJIS() != lCameraEditModelName.toShiftJIS())
             {
                 throw exceptions::IncompatibleFormatError(
-                    "This VMD file is for model edit, not camera edit. Model name: " + lModelName);
+                    "This VMD file is for model edit, not camera edit. Model name: " +
+                    lModelName.toUTF8ForDisplay());
             }
 
             uint64_t lTotalFrameCount = 0;
@@ -523,8 +526,10 @@ namespace vmdio::camera_edit
 
             // Write model name
             internal::writeStringField(
-                lFile, internal::VMD_MODEL_NAME_CAMERA_EDIT,
-                internal::VMD_MODEL_NAME_HEADER_SIZE, "Model name");
+                lFile,
+                VMDString::fromUTF8(internal::VMD_MODEL_NAME_CAMERA_EDIT),
+                internal::VMD_MODEL_NAME_HEADER_SIZE,
+                "Model name");
 
             // Write motion and morph frame counts as 0
             internal::writeUintValue(lFile, 0);

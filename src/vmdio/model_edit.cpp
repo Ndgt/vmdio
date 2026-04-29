@@ -5,8 +5,7 @@
 #include <tuple>
 #include <unordered_set>
 
-#include "encoding.h"
-#include "exceptions.h"
+#include "vmd_exceptions.h"
 #include "private/vmd_constants.h"
 #include "private/vmd_io_utils.h"
 
@@ -14,17 +13,16 @@ namespace
 {
     inline void validateModelName(const vmdio::model_edit::VMDData &pVmdData)
     {
-        if (pVmdData.modelName == vmdio::internal::VMD_MODEL_NAME_CAMERA_EDIT)
-        {
-            throw vmdio::exceptions::IncompatibleFormatError(
-                "The model name must not be the same as the camera edit VMD model name. Model name:" + pVmdData.modelName);
-        }
+        const vmdio::VMDString lCameraEditModelName =
+            vmdio::VMDString::fromUTF8(vmdio::internal::VMD_MODEL_NAME_CAMERA_EDIT);
 
-        if (pVmdData.modelName.empty())
-        {
+        if (pVmdData.modelName.toShiftJIS() == lCameraEditModelName.toShiftJIS())
+            throw vmdio::exceptions::IncompatibleFormatError(
+                "The model name must not be the same as the camera edit VMD model name. Model name: " + pVmdData.modelName.toUTF8ForDisplay());
+
+        if (pVmdData.modelName.toUTF8ForDisplay().empty())
             throw vmdio::exceptions::InvalidFieldValueError(
                 "Model name in the VMD data cannot be empty.");
-        }
     }
 
     inline void validateFrameCount(const vmdio::model_edit::VMDData &pVmdData)
@@ -35,7 +33,8 @@ namespace
         if (lTotalFrames > vmdio::internal::MAX_FRAME_COUNT)
         {
             throw vmdio::exceptions::FrameOverflowError(
-                "Total frame count in the VMD data exceeds the supported maximum limit of " + std::to_string(vmdio::internal::MAX_FRAME_COUNT) +
+                "Total frame count in the VMD data exceeds the supported maximum limit of " +
+                std::to_string(vmdio::internal::MAX_FRAME_COUNT) +
                 ". Total frames: " + std::to_string(lTotalFrames));
         }
     }
@@ -78,7 +77,7 @@ namespace
 
         for (const auto &lMotionFrame : pVmdData.motionFrames)
         {
-            if (lMotionFrame.boneName.empty())
+            if (lMotionFrame.boneName.toUTF8ForDisplay().empty())
             {
                 throw vmdio::exceptions::InvalidFieldValueError(
                     "Bone name in the motion frame cannot be empty. Frame number: " +
@@ -86,12 +85,14 @@ namespace
             }
 
             auto [it, lInserted] =
-                lFrameNumberBoneNameSet.insert({lMotionFrame.frameNumber, lMotionFrame.boneName});
+                lFrameNumberBoneNameSet.insert(
+                    {lMotionFrame.frameNumber, lMotionFrame.boneName.toShiftJIS()});
 
             if (!lInserted)
             {
                 throw vmdio::exceptions::FrameConflictError(
-                    "Duplicate motion frame detected with bone name '" + lMotionFrame.boneName +
+                    "Duplicate motion frame detected with bone name '" +
+                    lMotionFrame.boneName.toUTF8ForDisplay() +
                     "' and frame number " + std::to_string(lMotionFrame.frameNumber));
             }
 
@@ -106,7 +107,7 @@ namespace
 
         for (const auto &lMorphFrame : pVmdData.morphFrames)
         {
-            if (lMorphFrame.morphName.empty())
+            if (lMorphFrame.morphName.toUTF8ForDisplay().empty())
             {
                 throw vmdio::exceptions::InvalidFieldValueError(
                     "Morph name in the morph frame cannot be empty. Frame number: " +
@@ -114,12 +115,14 @@ namespace
             }
 
             auto [it, lInserted] =
-                lFrameNumberMorphNameSet.insert({lMorphFrame.frameNumber, lMorphFrame.morphName});
+                lFrameNumberMorphNameSet.insert(
+                    {lMorphFrame.frameNumber, lMorphFrame.morphName.toShiftJIS()});
 
             if (!lInserted)
             {
                 throw vmdio::exceptions::FrameConflictError(
-                    "Duplicate morph frame detected with morph name '" + lMorphFrame.morphName +
+                    "Duplicate morph frame detected with morph name '" +
+                    lMorphFrame.morphName.toUTF8ForDisplay() +
                     "' and frame number " + std::to_string(lMorphFrame.frameNumber));
             }
         }
@@ -149,10 +152,11 @@ namespace
 
             for (const auto &lIKData : lVisibleIKFrame.ikDataList)
             {
-                if (lIKData.ikBoneName.empty())
+                if (lIKData.ikBoneName.toUTF8ForDisplay().empty())
                 {
                     throw vmdio::exceptions::InvalidFieldValueError(
-                        "IK bone name in the visible IK frame cannot be empty. Frame number: " + std::to_string(lVisibleIKFrame.frameNumber));
+                        "IK bone name in the visible IK frame cannot be empty. Frame number: " +
+                        std::to_string(lVisibleIKFrame.frameNumber));
                 }
 
                 if (lIKData.ikState != vmdio::model_edit::IKState::OFF &&
@@ -236,7 +240,7 @@ namespace vmdio::model_edit
     {
         // Read bone name
         pMotionFrame.boneName = internal::readStringField(
-            pStream, internal::VMD_BONE_NAME_FIELD_SIZE, "Bone name");
+            pStream, internal::VMD_BONE_NAME_FIELD_SIZE);
 
         // Read frame number
         internal::readUintValue(pStream, pMotionFrame.frameNumber);
@@ -298,7 +302,7 @@ namespace vmdio::model_edit
     {
         // Read morph name
         pMorphFrame.morphName = internal::readStringField(
-            pStream, internal::VMD_MORPH_NAME_FIELD_SIZE, "Morph name");
+            pStream, internal::VMD_MORPH_NAME_FIELD_SIZE);
 
         // Read frame number
         internal::readUintValue(pStream, pMorphFrame.frameNumber);
@@ -358,7 +362,7 @@ namespace vmdio::model_edit
 
             // Read IK bone name
             lIKData.ikBoneName = internal::readStringField(
-                pStream, internal::VMD_IK_BONE_NAME_FIELD_SIZE, "IK bone name");
+                pStream, internal::VMD_IK_BONE_NAME_FIELD_SIZE);
 
             // Read IK state flag
             uint8_t lIkEnableFlag;
@@ -438,14 +442,18 @@ namespace vmdio::model_edit
             }
 
             // Read model name
-            std::string lModelName = internal::readStringField(
-                lFile, internal::VMD_MODEL_NAME_HEADER_SIZE, "Model name");
+            VMDString lModelName = internal::readStringField(
+                lFile, internal::VMD_MODEL_NAME_HEADER_SIZE);
+
+            const VMDString lCameraEditModelName =
+                VMDString::fromUTF8(internal::VMD_MODEL_NAME_CAMERA_EDIT);
 
             // Validate model name
-            if (lModelName == internal::VMD_MODEL_NAME_CAMERA_EDIT)
+            if (lModelName.toShiftJIS() == lCameraEditModelName.toShiftJIS())
             {
                 throw exceptions::IncompatibleFormatError(
-                    "This VMD file is for camera edit, not model edit. Model name: " + lModelName);
+                    "This VMD file is for camera edit, not model edit. Model name: " +
+                    lModelName.toUTF8ForDisplay());
             }
 
             lVmdData.modelName = lModelName;
