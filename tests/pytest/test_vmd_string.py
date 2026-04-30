@@ -11,7 +11,7 @@ def test_vmd_string_from_utf8():
     assert value.toUTF8() == "センター"
     assert value.toUTF8ForDisplay() == "センター"
     assert value.toShiftJIS() == "センター".encode("cp932")
-    assert value.shiftJISByteSize() == len("センター".encode("cp932"))
+    assert value.sizeofShiftJISBytes() == len("センター".encode("cp932"))
 
 
 def test_vmd_string_from_shift_jis():
@@ -26,7 +26,7 @@ def test_vmd_string_from_shift_jis():
 def test_vmd_string_from_shift_jis_bytes_alias():
     shift_jis_bytes = "左足ＩＫ".encode("cp932")
 
-    value = VMDString.fromShiftJISBytes(shift_jis_bytes)
+    value = VMDString.fromShiftJIS(shift_jis_bytes)
 
     assert value.toShiftJIS() == shift_jis_bytes
     assert value.toUTF8() == "左足ＩＫ"

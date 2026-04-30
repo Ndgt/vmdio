@@ -1,6 +1,7 @@
 import pytest
 
 import pyvmdio.model_edit as vmdio
+import pyvmdio.encoding as encoding
 import pyvmdio.exceptions as vmdio_exceptions
 from pyvmdio.vmd_string import VMDString
 
@@ -147,14 +148,44 @@ def test_string_fields_accept_vmd_string():
     assert ik_data.ikBoneName.toUTF8() == "左足ＩＫ"
 
 
-def test_string_fields_accept_shift_jis_bytes():
+def test_string_fields_accept_utf8_bytes():
+    data = vmdio.VMDData()
+    data.modelName = "vmdio-test".encode("utf-8")
+
+    frame = vmdio.MotionFrame()
+    frame.boneName = "センター".encode("utf-8")
+
+    morph = vmdio.MorphFrame()
+    morph.morphName = "まばたき".encode("utf-8")
+
+    ik_data = vmdio.IKData()
+    ik_data.ikBoneName = "左足ＩＫ".encode("utf-8")
+
+    assert data.modelName.toUTF8() == "vmdio-test"
+    assert frame.boneName.toUTF8() == "センター"
+    assert morph.morphName.toUTF8() == "まばたき"
+    assert ik_data.ikBoneName.toUTF8() == "左足ＩＫ"
+
+
+def test_string_field_bytes_are_utf8_not_shift_jis():
     frame = vmdio.MotionFrame()
 
-    shift_jis_bytes = "センター".encode("cp932")
-    frame.boneName = shift_jis_bytes
+    with pytest.raises(vmdio_exceptions.StringProcessError):
+        frame.boneName = "センター".encode("cp932")
 
-    assert frame.boneName.toShiftJIS() == shift_jis_bytes
-    assert frame.boneName.toUTF8() == "センター"
+
+def test_utf8_to_shift_jis_accepts_utf8_bytes():
+    shift_jis_bytes = encoding.utf8ToShiftJIS("センター".encode("utf-8"))
+
+    assert isinstance(shift_jis_bytes, bytes)
+    assert shift_jis_bytes == "センター".encode("cp932")
+
+
+def test_vmd_string_from_utf8_accepts_utf8_bytes():
+    value = VMDString.fromUTF8("センター".encode("utf-8"))
+
+    assert value.toUTF8() == "センター"
+    assert value.toShiftJIS() == "センター".encode("cp932")
 
 
 def test_invalid_shift_jis_bytes_are_preserved_and_displayed_as_question_mark(temp_vmd_path):
@@ -178,3 +209,11 @@ def test_invalid_shift_jis_bytes_are_preserved_and_displayed_as_question_mark(te
 
     assert read_back.morphFrames[0].morphName.toShiftJIS() == b"\x82"
     assert read_back.morphFrames[0].morphName.toUTF8ForDisplay() == "?"
+
+
+def test_vmd_string_repr_contains_escaped_content():
+    value = VMDString.fromUTF8("a'b\nc")
+
+    r = repr(value)
+    assert r.startswith("<VMDString ")
+    assert "\\n" in r

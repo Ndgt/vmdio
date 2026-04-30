@@ -7,36 +7,15 @@
 
 namespace vmdio
 {
-    VMDString::VMDString(std::string_view pShiftJISBytes)
-        : mData(pShiftJISBytes.size())
+    VMDString::VMDString(std::string_view pShiftJISsv) : mData(pShiftJISsv.size())
     {
-        if (!pShiftJISBytes.empty())
-            std::memcpy(mData.data(), pShiftJISBytes.data(), pShiftJISBytes.size());
+        if (!pShiftJISsv.empty())
+            std::memcpy(mData.data(), pShiftJISsv.data(), pShiftJISsv.size());
     }
 
-    VMDString VMDString::fromUTF8(std::string_view pUTF8String)
+    const std::vector<std::byte> &VMDString::shiftJISBytes() const noexcept
     {
-        const std::string lShiftJISString = encoding::utf8ToShiftJIS(pUTF8String);
-
-        return VMDString{lShiftJISString};
-    }
-
-    VMDString VMDString::fromShiftJIS(std::string_view pShiftJISBytes)
-    {
-        return VMDString{pShiftJISBytes};
-    }
-
-    VMDString VMDString::fromShiftJISBytes(const std::byte *pBytes, std::size_t pSize)
-    {
-        // MEMO: Validate pBytes when pSize is non-zero
-
-        VMDString lResult;
-        lResult.mData.resize(pSize);
-
-        if (pSize != 0)
-            std::memcpy(lResult.mData.data(), pBytes, pSize);
-
-        return lResult;
+        return mData;
     }
 
     bool VMDString::empty() const noexcept
@@ -44,14 +23,21 @@ namespace vmdio
         return mData.empty();
     }
 
-    std::size_t VMDString::shiftJISByteSize() const noexcept
+    std::size_t VMDString::sizeofShiftJISBytes() const noexcept
     {
         return mData.size();
     }
 
-    const std::vector<std::byte> &VMDString::shiftJISBytes() const noexcept
+    VMDString VMDString::fromShiftJIS(std::string_view pShiftJISsv)
     {
-        return mData;
+        return VMDString{pShiftJISsv};
+    }
+
+    VMDString VMDString::fromUTF8(std::string_view pUTF8Encodedsv)
+    {
+        const std::string lShiftJISString = encoding::utf8ToShiftJIS(pUTF8Encodedsv);
+
+        return VMDString{lShiftJISString};
     }
 
     std::string VMDString::toShiftJIS() const
@@ -93,8 +79,7 @@ namespace vmdio
     }
 
     std::size_t VMDString::shiftJISCharSize(
-        std::string_view pBytes,
-        std::size_t pPosition) noexcept
+        std::string_view pBytes, std::size_t pPosition) noexcept
     {
         if (pPosition >= pBytes.size())
             return 0;
@@ -139,9 +124,7 @@ namespace vmdio
                 continue;
             }
 
-            const std::string_view lOneCharacter{
-                pBytes.data() + lPosition,
-                lCharSize};
+            const std::string_view lOneCharacter{pBytes.data() + lPosition, lCharSize};
 
             try
             {

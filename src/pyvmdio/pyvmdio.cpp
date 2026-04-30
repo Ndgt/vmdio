@@ -24,7 +24,7 @@ PYBIND11_MAKE_OPAQUE(std::vector<vmdio::model_edit::IKData>);
 
 namespace
 {
-    py::bytes toPythonBytes(const std::string &pBytes)
+    py::bytes stdStringToPythonBytes(const std::string &pBytes)
     {
         return py::bytes(pBytes.data(), pBytes.size());
     }
@@ -42,11 +42,11 @@ namespace
 
         if (py::isinstance<py::bytes>(pValue))
         {
-            const std::string lShiftJISBytes = pValue.cast<std::string>();
-            return vmdio::VMDString::fromShiftJIS(lShiftJISBytes);
+            const std::string lUTF8Bytes = pValue.cast<std::string>();
+            return vmdio::VMDString::fromUTF8(lUTF8Bytes);
         }
 
-        throw py::type_error("Expected VMDString, str, or bytes");
+        throw py::type_error("Expected VMDString, str, or UTF-8 bytes");
     }
 
     void bindCameraEdit(py::module_ &pModule)
@@ -134,8 +134,7 @@ namespace
         pModule.def("readVMD", &vmdio::camera_edit::readVMD,
                     "Read a VMD file and return a CameraEdit.VMDData object",
                     py::arg("file_path"),
-                    py::call_guard<py::gil_scoped_release>(),
-                    "Read a camera edit VMD file.");
+                    py::call_guard<py::gil_scoped_release>());
 
         pModule.def("writeVMD", &vmdio::camera_edit::writeVMD,
                     "Write a CameraEdit.VMDData object to a VMD file",
@@ -185,15 +184,14 @@ namespace
             .def(py::init<>())
             .def_property(
                 "boneName",
-                [](vmdio::model_edit::MotionFrame &pFrame) -> vmdio::VMDString &
+                [](const vmdio::model_edit::MotionFrame &pFrame)
                 {
                     return pFrame.boneName;
                 },
                 [](vmdio::model_edit::MotionFrame &pFrame, const py::object &pValue)
                 {
                     pFrame.boneName = toVMDString(pValue);
-                },
-                py::return_value_policy::reference_internal)
+                })
             .def_readwrite("frameNumber", &vmdio::model_edit::MotionFrame::frameNumber)
             .def_readwrite("position", &vmdio::model_edit::MotionFrame::position)
             .def_readwrite("rotation", &vmdio::model_edit::MotionFrame::rotation)
@@ -203,15 +201,14 @@ namespace
             .def(py::init<>())
             .def_property(
                 "morphName",
-                [](vmdio::model_edit::MorphFrame &pFrame) -> vmdio::VMDString &
+                [](const vmdio::model_edit::MorphFrame &pFrame)
                 {
                     return pFrame.morphName;
                 },
                 [](vmdio::model_edit::MorphFrame &pFrame, const py::object &pValue)
                 {
                     pFrame.morphName = toVMDString(pValue);
-                },
-                py::return_value_policy::reference_internal)
+                })
             .def_readwrite("frameNumber", &vmdio::model_edit::MorphFrame::frameNumber)
             .def_readwrite("value", &vmdio::model_edit::MorphFrame::value);
 
@@ -219,15 +216,14 @@ namespace
             .def(py::init<>())
             .def_property(
                 "ikBoneName",
-                [](vmdio::model_edit::IKData &pIKData) -> vmdio::VMDString &
+                [](const vmdio::model_edit::IKData &pIKData)
                 {
                     return pIKData.ikBoneName;
                 },
                 [](vmdio::model_edit::IKData &pIKData, const py::object &pValue)
                 {
                     pIKData.ikBoneName = toVMDString(pValue);
-                },
-                py::return_value_policy::reference_internal)
+                })
             .def_readwrite("ikState", &vmdio::model_edit::IKData::ikState);
 
         py::bind_vector<std::vector<vmdio::model_edit::IKData>>(pModule, "IKDataList");
@@ -251,15 +247,14 @@ namespace
             .def(py::init<>())
             .def_property(
                 "modelName",
-                [](vmdio::model_edit::VMDData &pData) -> vmdio::VMDString &
+                [](const vmdio::model_edit::VMDData &pData)
                 {
                     return pData.modelName;
                 },
                 [](vmdio::model_edit::VMDData &pData, const py::object &pValue)
                 {
                     pData.modelName = toVMDString(pValue);
-                },
-                py::return_value_policy::reference_internal)
+                })
             .def_readwrite("motionFrames", &vmdio::model_edit::VMDData::motionFrames)
             .def_readwrite("morphFrames", &vmdio::model_edit::VMDData::morphFrames)
             .def_readwrite("visibleIKFrames", &vmdio::model_edit::VMDData::visibleIKFrames);
@@ -287,7 +282,8 @@ namespace
 
                 return py::bytes(lShiftJISBytes.data(), lShiftJISBytes.size());
             },
-            py::arg("utf8_string"));
+            "Convert UTF-8 text or UTF-8 bytes to Shift_JIS bytes.",
+            py::arg("utf8_string_or_bytes"));
 
         pModule.def(
             "shiftJISToUTF8",
@@ -296,6 +292,7 @@ namespace
                 const std::string lShiftJISBytes = pShiftJISBytes;
                 return vmdio::encoding::shiftJISToUTF8(lShiftJISBytes);
             },
+            "Convert Shift_JIS bytes to UTF-8 text.",
             py::arg("shift_jis_bytes"));
     }
 
@@ -327,14 +324,9 @@ namespace
         py::class_<vmdio::VMDString>(pModule, "VMDString")
             .def(py::init<>())
 
-            .def_static(
-                "fromUTF8",
-                [](const std::string &pUTF8String)
-                {
-                    return vmdio::VMDString::fromUTF8(pUTF8String);
-                },
-                "Create a VMDString from a Python str interpreted as UTF-8 text.",
-                py::arg("utf8_string"))
+            .def("empty", &vmdio::VMDString::empty)
+
+            .def("sizeofShiftJISBytes", &vmdio::VMDString::sizeofShiftJISBytes)
 
             .def_static(
                 "fromShiftJIS",
@@ -347,14 +339,26 @@ namespace
                 py::arg("shift_jis_bytes"))
 
             .def_static(
-                "fromShiftJISBytes",
-                [](py::bytes pShiftJISBytes)
+                "fromUTF8",
+                [](const std::string &pUTF8StringOrBytes)
                 {
-                    const std::string lShiftJISBytes = pShiftJISBytes;
-                    return vmdio::VMDString::fromShiftJIS(lShiftJISBytes);
+                    return vmdio::VMDString::fromUTF8(pUTF8StringOrBytes);
                 },
-                "Create a VMDString from Shift_JIS bytes.",
-                py::arg("shift_jis_bytes"))
+                "Create a VMDString from a Python string or UTF-8 bytes.",
+                py::arg("utf8_string_or_bytes"))
+
+            .def(
+                "toShiftJIS",
+                [](const vmdio::VMDString &pString)
+                {
+                    return stdStringToPythonBytes(pString.toShiftJIS());
+                },
+                "Return the stored Shift_JIS byte sequence as Python bytes.")
+
+            .def("toUTF8", &vmdio::VMDString::toUTF8)
+
+            .def("toUTF8ForDisplay", &vmdio::VMDString::toUTF8ForDisplay,
+                 py::arg("stop_at_nul") = true)
 
             .def(
                 "__bool__",
@@ -363,59 +367,36 @@ namespace
                     return !pString.empty();
                 })
 
-            .def("empty", &vmdio::VMDString::empty)
-
-            .def("shiftJISByteSize", &vmdio::VMDString::shiftJISByteSize)
-
-            .def(
-                "bytes",
-                [](const vmdio::VMDString &pString)
-                {
-                    return toPythonBytes(pString.toShiftJIS());
-                },
-                "Return the stored Shift_JIS byte sequence as Python bytes.")
-
-            .def(
-                "shiftJISBytes",
-                [](const vmdio::VMDString &pString)
-                {
-                    return toPythonBytes(pString.toShiftJIS());
-                },
-                "Return the stored Shift_JIS byte sequence as Python bytes.")
-
-            .def(
-                "toShiftJIS",
-                [](const vmdio::VMDString &pString)
-                {
-                    return toPythonBytes(pString.toShiftJIS());
-                },
-                "Return the stored Shift_JIS byte sequence as Python bytes.")
-
-            .def("toUTF8", &vmdio::VMDString::toUTF8)
-            .def("toUTF8ForDisplay", &vmdio::VMDString::toUTF8ForDisplay,
-                 py::arg("stop_at_nul") = true)
-
-            .def(
-                "__str__",
-                [](const vmdio::VMDString &pString)
-                {
-                    return pString.toUTF8ForDisplay();
-                })
-
-            .def(
-                "__repr__",
-                [](const vmdio::VMDString &pString)
-                {
-                    return "<VMDString '" + pString.toUTF8ForDisplay() + "'>";
-                })
-
             .def(
                 "__eq__",
                 [](const vmdio::VMDString &pLeft, const vmdio::VMDString &pRight)
                 {
                     return pLeft.toShiftJIS() == pRight.toShiftJIS();
                 },
-                py::is_operator());
+                py::is_operator())
+
+            .def(
+                "__hash__",
+                [](const vmdio::VMDString &pString)
+                {
+                    const std::string bytes = pString.toShiftJIS();
+                    return py::hash(py::bytes(bytes.data(), bytes.size()));
+                })
+
+            .def(
+                "__repr__",
+                [](const vmdio::VMDString &pString)
+                {
+                    py::str s(pString.toUTF8ForDisplay());
+                    return "<VMDString " + py::repr(s).cast<std::string>() + ">";
+                })
+
+            .def(
+                "__str__",
+                [](const vmdio::VMDString &pString)
+                {
+                    return pString.toUTF8ForDisplay();
+                });
     }
 }
 

@@ -180,6 +180,21 @@ TEST_F(ModelEditValidationTest, EmptyMorphName)
     EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::InvalidFieldValueError);
 }
 
+// TEST: MorphNameTooLong
+// Check if InvalidFieldValueError is properly thrown when morphName exceeds the VMD field limit
+TEST_F(ModelEditValidationTest, MorphNameTooLong)
+{
+    vmd::VMDData lBadData;
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
+
+    vmd::MorphFrame lFrame;
+    lFrame.morphName = test_base::makeVMDString("123456789012345678901");
+
+    lBadData.morphFrames.push_back(lFrame);
+
+    EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::InvalidFieldValueError);
+}
+
 // TEST: VisibleIKFrameConflict
 // Check if FrameConflictError is properly thrown when there are duplicate visible IK frames
 TEST_F(ModelEditValidationTest, VisibleIKFrameConflict)
@@ -231,6 +246,25 @@ TEST_F(ModelEditValidationTest, EmptyIKBoneName)
 
     // Empty IK bone name
     lIKData.ikBoneName = test_base::makeVMDString("");
+
+    lFrame.ikDataList.push_back(lIKData);
+    lBadData.visibleIKFrames.push_back(lFrame);
+
+    EXPECT_THROW(vmd::writeVMD(lBadData, mTempFilePath), vmd_except::InvalidFieldValueError);
+}
+
+// TEST: IKBoneNameTooLong
+// Check if InvalidFieldValueError is properly thrown when an IK data entry has an IK bone name
+// that exceeds the VMD field limit
+TEST_F(ModelEditValidationTest, IKBoneNameTooLong)
+{
+    vmd::VMDData lBadData;
+    lBadData.modelName = test_base::makeVMDString("vmdio-test");
+
+    vmd::VisibleIKFrame lFrame;
+
+    vmd::IKData lIKData;
+    lIKData.ikBoneName = test_base::makeVMDString("123456789012345678901");
 
     lFrame.ikDataList.push_back(lIKData);
     lBadData.visibleIKFrames.push_back(lFrame);

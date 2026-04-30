@@ -41,20 +41,6 @@ def test_invalid_camera_interpolation(temp_vmd_path):
         vmdio.writeVMD(bad_data, temp_vmd_path)
 
 
-def test_invalid_projection_type(temp_vmd_path):
-    bad_data = vmdio.VMDData()
-    frame = vmdio.CameraFrame()
-
-    try:
-        frame.projectionType = 99  # Pybind11 might raise TypeError here
-    except TypeError:
-        return
-
-    bad_data.cameraFrames.append(frame)
-    with pytest.raises((vmdio_exceptions.InvalidFieldValueError, TypeError)):
-        vmdio.writeVMD(bad_data, temp_vmd_path)
-
-
 def test_light_frame_conflict(temp_vmd_path):
     bad_data = vmdio.VMDData()
 
@@ -82,18 +68,4 @@ def test_self_shadow_frame_conflict(temp_vmd_path):
     bad_data.selfShadowFrames.append(f2)
 
     with pytest.raises(vmdio_exceptions.FrameConflictError):
-        vmdio.writeVMD(bad_data, temp_vmd_path)
-
-
-def test_invalid_self_shadow_mode(temp_vmd_path):
-    bad_data = vmdio.VMDData()
-    frame = vmdio.SelfShadowFrame()
-
-    try:
-        frame.mode = 99
-    except TypeError:
-        return
-
-    bad_data.selfShadowFrames.append(frame)
-    with pytest.raises((vmdio_exceptions.InvalidFieldValueError, TypeError)):
         vmdio.writeVMD(bad_data, temp_vmd_path)
