@@ -27,19 +27,19 @@ void printMotionFrames(const vmd::VMDData &pVmdData)
     if (pVmdData.motionFrames.empty())
         return;
 
-    std::cout << "\n=== Motion Frames ===" << "\n";
+    std::cout << "\n=== Motion Frames ===\n";
 
     for (const auto &lMotionFrame : pVmdData.motionFrames)
     {
-        vmd::Position lPos = lMotionFrame.position;
-        vmd::Quaternion lRot = lMotionFrame.rotation;
-        vmd::MotionInterpolation lInterp = lMotionFrame.interpolation;
+        const vmd::Position lPos = lMotionFrame.position;
+        const vmd::Quaternion lRot = lMotionFrame.rotation;
+        const vmd::MotionInterpolation lInterp = lMotionFrame.interpolation;
 
         std::cout << "Motion Frame: " << lMotionFrame.frameNumber << "\n";
         std::cout << "  Bone Name: " << lMotionFrame.boneName.toUTF8ForDisplay() << "\n";
         std::cout << "  Position: (" << lPos.x << ", " << lPos.y << ", " << lPos.z << ")\n";
         std::cout << "  Rotation: (" << lRot.qx << ", " << lRot.qy << ", " << lRot.qz << ", " << lRot.qw << ")\n";
-        std::cout << "  Interpolation: " << "\n";
+        std::cout << "  Interpolation:\n";
         std::cout << "    X Position: (" << lInterp.xPos.x1 << ", " << lInterp.xPos.y1 << ", " << lInterp.xPos.x2 << ", " << lInterp.xPos.y2 << ")\n";
         std::cout << "    Y Position: (" << lInterp.yPos.x1 << ", " << lInterp.yPos.y1 << ", " << lInterp.yPos.x2 << ", " << lInterp.yPos.y2 << ")\n";
         std::cout << "    Z Position: (" << lInterp.zPos.x1 << ", " << lInterp.zPos.y1 << ", " << lInterp.zPos.x2 << ", " << lInterp.zPos.y2 << ")\n";
@@ -74,6 +74,7 @@ void printVisibleIKFrames(const vmd::VMDData &pVmdData)
     for (const auto &lVisibleIKFrame : pVmdData.visibleIKFrames)
     {
         std::string lVisibilityStr = "Unknown";
+
         switch (lVisibleIKFrame.visibility)
         {
         case vmd::Visibility::Hidden:
@@ -97,6 +98,7 @@ void printVisibleIKFrames(const vmd::VMDData &pVmdData)
         for (const auto &lIKData : lVisibleIKFrame.ikDataList)
         {
             std::string lIKStateStr = "Unknown";
+
             switch (lIKData.ikState)
             {
             case vmd::IKState::OFF:
@@ -124,14 +126,15 @@ int main(int argc, char *argv[])
         if (argc < 2)
             throw std::runtime_error("No VMD file path provided.");
 
-        std::filesystem::path lVMDFilePath = argv[1];
+        const std::filesystem::path lVMDFilePath = argv[1];
+
         if (!std::filesystem::exists(lVMDFilePath))
             throw std::runtime_error("File does not exist: " + lVMDFilePath.string());
 
-        // Read VMD file and populate data structure
-        vmd::VMDData lVmdDataForModelEdit = vmd::readVMD(lVMDFilePath);
+        // Read a model edit VMD file and populate the model_edit::VMDData structure
+        const vmd::VMDData lVmdDataForModelEdit = vmd::readVMD(lVMDFilePath);
 
-        // Print the summary of the imported data
+        // Print the summary of imported data
         printSummaryData(lVmdDataForModelEdit);
 
         // Print all frames for each type of data
