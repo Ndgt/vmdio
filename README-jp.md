@@ -144,12 +144,76 @@ doxygen ./docs/Doxyfile
 
 ### 4.1. 文字列の扱いに関する注意
 
-本ライブラリの public API の範囲では、文字列は `UTF-8` エンコードされた `std::string` として扱われます。ライブラリ利用時は、コードエディタおよびターミナルのエンコーディングを `UTF-8` に設定してください。
+本ライブラリの public API における VMD 文字列フィールドは `vmdio::VMDString` で表現されます。
 
-一方、VMD ファイル内のキーフレームデータのフィールド等の文字列は固定長の `Shift_JIS` ですが、これらのエンコーディング変換はライブラリ内部で処理されます。書き込みの際には、`Shift_JIS` に変換できない文字を含む場合、または変換後のバイト数が既定のフィールド長を超える場合は例外を送出します。また、読み込みの際も、ライブラリが `Shift_JIS` から `UTF-8` へのデコードに失敗した場合は例外を送出します。
+`VMDString` は VMD 文字列フィールドのための値型です。内部表現として、VMD ファイルで使用される `Shift_JIS` バイト列を保持します。これにより、VMD ファイルから読み込んだ文字列フィールドのバイト列を可能な限り保持できます。これには、厳密には `UTF-8` にデコードできないバイト列も含まれます。
 
+C++ で通常の表示用文字列から `VMDString` を作る場合は、`UTF-8` 文字列から構築します。
 
-[CMakeLists.txt](/CMakeLists.txt) での以下の設定により、ライブラリおよびプロジェクトのソースコードは `UTF-8` エンコードでコンパイルされるようになっています。
+```cpp
+#include <vmdio/model_edit.h>
+#include <vmdio/vmd_string.h>
+
+vmdio::model_edit::VMDData lData;
+lData.modelName = vmdio::VMDString::fromUTF8(u8"初音ミク");
+```
+
+<br>`model_edit.h` および `camera_edit.h` は、public なデータ構造に `VMDString` フィールドを含むため、内部で `vmd_string.h` を include しています。ただし、ユーザーコード内で `VMDString` の構築や変換を直接行う場合は、依存関係を明示するために `vmd_string.h` を明示的に include することを推奨します。
+
+すでに `Shift_JIS` エンコードされたバイト列を持っている場合は、`fromShiftJIS()` または `fromShiftJISBytes()` を使用します。
+
+```cpp
+vmdio::VMDString lName = vmdio::VMDString::fromShiftJIS(lShiftJISBytes);
+```
+
+<br>表示用の文字列を取得する場合は `toUTF8ForDisplay()` を使用します。この表示用変換では、不正または不完全なバイト列は `?` に置き換えられます。
+
+```cpp
+std::string lDisplayName = lName.toUTF8ForDisplay();
+```
+
+<br>厳密な変換を行う場合は `toUTF8()` を使用します。保持しているバイト列を `Shift_JIS` としてデコードできない場合、この関数は例外を送出することがあります。
+
+```cpp
+std::string lStrictUTF8Name = lName.toUTF8();
+```
+
+<br>VMD ファイルを書き込む際、ライブラリはシリアライズの境界で、保持している `Shift_JIS` バイト列の長さを検証します。VMD のフィールド長の上限を超えている場合は例外を送出します。ライブラリは文字列を暗黙的に切り捨てません。
+
+Python wrapper では、VMD 文字列フィールドに `str`、`bytes`、または `VMDString` を代入できます。
+
+```python
+import pyvmdio.model_edit as vmdio
+
+data = vmdio.VMDData()
+data.modelName = "初音ミク"          # Python str
+
+frame = vmdio.MotionFrame()
+frame.boneName = "センター"          # 内部的に VMDString へ変換される
+```
+
+<br>Python の `str` を VMD 文字列フィールドへ代入した場合、その時点で `VMDString` に変換されます。文字列を `Shift_JIS` で表現できない場合は、代入時に `pyvmdio.exceptions.StringProcessError` が送出されます。一方、フィールドのバイト長制限は `writeVMD()` がデータをシリアライズする時点で検証されます。
+
+Python の VMD 文字列フィールドへ代入する `bytes` は、UTF-8 エンコード済みバイト列として扱われます。すでに生の `Shift_JIS` バイト列を持っている場合は、`VMDString.fromShiftJIS()` で明示的に `VMDString` を構築してください。
+
+```python
+from pyvmdio.vmd_string import VMDString
+
+frame.boneName = "センター".encode("utf-8")
+frame.boneName = VMDString.fromShiftJIS("センター".encode("cp932"))
+```
+
+<br>Python のエンコード変換 API では、エンコード済みのバイト列は `bytes` として表現されます。
+
+```python
+import pyvmdio.encoding as encoding
+
+shift_jis_bytes = encoding.utf8ToShiftJIS("センター")                  # str -> bytes
+shift_jis_bytes = encoding.utf8ToShiftJIS("センター".encode("utf-8"))  # UTF-8 bytes -> bytes
+text = encoding.shiftJISToUTF8(shift_jis_bytes)                       # bytes -> str
+```
+
+<br>[CMakeLists.txt](/CMakeLists.txt) での以下の設定により、ライブラリおよびプロジェクトのソースコードは `UTF-8` エンコードでコンパイルされるようになっています。
 
 ```cmake
 # Set UTF-8 encoding
@@ -160,10 +224,11 @@ target_compile_options(vmdio PUBLIC /utf-8)
 
 ### 4.2. 読み書きの関数におけるバリデーション
 
-VMD ファイルの読み込みの関数 `readVMD()` は、ライブラリのデータ構造で表現可能な値については
-VMD ファイル中の値を可能な限りそのまま読み取ります。ただし、ライブラリのデータ構造で表現できないもの（例: 定義外のフラグ値など）や、文字列のデコードに失敗する場合は例外を送出します。
+VMD ファイルの読み込み関数 `readVMD()` は、ライブラリのデータ構造で表現可能な値については、VMD ファイル中の値を可能な限りそのまま保持します。ただし、定義外のフラグ値のようにライブラリのデータ構造で表現できない値に遭遇した場合は例外を送出します。
 
-VMD ファイルの書き込みの関数 `writeVMD()` は、書き込みの処理の前に必要なバリデーションを行い、不正な値が検出された場合や、文字列のエンコードに失敗する場合は例外を送出します。
+VMD 文字列フィールドについては、`readVMD()` は最初の NUL バイトより前にある意味のある `Shift_JIS` バイト列を保持します。不完全または不正な `Shift_JIS` バイト列は `VMDString` 内に保持され、`toUTF8ForDisplay()` により、不正な部分を `?` に置き換えた表示用文字列として取得できます。
+
+VMD ファイルの書き込み関数 `writeVMD()` は、書き込み前に必要なバリデーションを行います。不正な値が検出された場合や、保持している `Shift_JIS` 文字列が VMD のフィールド長上限を超える場合は例外を送出します。
 
 `writeVMD()` はボーンの回転を表すクォータニオンのノルムがゼロに近い場合を不正値として例外を送出します。一方、ゼロではないが正規化されていないクォータニオンについては、シリアライズ時にライブラリ内部で正規化して書き込みます。
 
@@ -210,7 +275,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE vmdio)
 <br>
 
 ### 4.4. Python での利用
-Python wrapper module `pyvmdio` は pybind11 で実装されており、`vmdio` ライブラリと同一の識別子を Python wrapper でも使用しているため、API は C++ と Python でほぼ一致しています。
+
+Python wrapper module `pyvmdio` は pybind11 で実装されています。wrapper は C++ API の構造を可能な限り反映しつつ、エンコード済みバイト列については必要に応じて Python の `bytes` 型へ対応付けます。
 
 `pyvmdio` は Python wheel としてリリースされており、`pip` でインストールできます。
 
@@ -218,17 +284,47 @@ Python wrapper module `pyvmdio` は pybind11 で実装されており、`vmdio` 
 pip install <path to pyvmdio-*.whl>
 ```
 
-<br>
-
-基本的な使用例は以下の通りです。
+<br>基本的な使用例は以下の通りです。
 
 ```python
 import pyvmdio.model_edit as vmdio
 
 vmd_data = vmdio.readVMD("<path to vmd file>")
 
-print(f"Model Name: {vmd_data.modelName}")
+print(f"Model Name: {vmd_data.modelName.toUTF8ForDisplay()}")
 ```
+
+<br>通常のテキストを扱う場合、VMD 文字列フィールドには Python の `str` を代入できます。
+
+```python
+data = vmdio.VMDData()
+data.modelName = "初音ミク"
+
+frame = vmdio.MotionFrame()
+frame.boneName = "センター"
+```
+
+<br>Python の VMD 文字列フィールドへ代入する `bytes` は、UTF-8 エンコード済みバイト列として扱われます。生の `Shift_JIS` バイト列を扱いたい場合は、明示的に `VMDString` を構築してください。
+
+```python
+from pyvmdio.vmd_string import VMDString
+
+frame.boneName = "センター".encode("utf-8")
+frame.boneName = VMDString.fromShiftJIS("センター".encode("cp932"))
+
+print(frame.boneName.toShiftJIS())
+```
+
+<br>Python のエンコード変換関数では、Unicode テキストには `str`、エンコード済みのバイト列には `bytes` を使用します。
+
+```python
+import pyvmdio.encoding as encoding
+
+shift_jis_bytes = encoding.utf8ToShiftJIS("センター")
+text = encoding.shiftJISToUTF8(shift_jis_bytes)
+```
+
+<br>**注意**: Python の frame list クラスは内部的に C++ の `std::vector` に対応しています。frame list を変更した後は、必要な要素を再取得してください。
 
 <br>
 

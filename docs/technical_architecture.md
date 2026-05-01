@@ -88,9 +88,12 @@ During reading and writing, custom exceptions defined in `vmdio::exceptions` may
 
 `readVMD()` preserves values from the VMD file as faithfully as possible when they can be represented by the library's data structures. It throws exceptions for values that cannot be represented by those structures, such as undefined enum-backed flag values.
 
-`writeVMD()` validates data before serialization and throws exceptions when invalid values are detected. The current validation rules are as follows:
+For string fields, `readVMD()` preserves the meaningful `Shift_JIS` bytes before the first NUL byte in each fixed-length VMD string field. Incomplete or invalid `Shift_JIS` byte sequences are kept in `vmdio::VMDString` and can be displayed with `toUTF8ForDisplay()`.
+
+`writeVMD()` validates data before serialization and throws exceptions when invalid values are detected. String field byte-length limits are validated at this serialization boundary. The current validation rules are as follows:
 
 - `vmdio::model_edit`
+  - total number of frames exceeds the library limit
   - empty model name
   - duplicate `MotionFrame` entries with the same `boneName` and same `frameNumber`
   - duplicate `MorphFrame` entries with the same `morphName` and same `frameNumber`
@@ -102,6 +105,7 @@ During reading and writing, custom exceptions defined in `vmdio::exceptions` may
   - string fields whose stored Shift_JIS byte length exceeds the VMD field size
 
 - `vmdio::camera_edit`
+  - total number of frames exceeds the library limit
   - duplicate `CameraFrame` / `LightFrame` / `SelfShadowFrame` entries with the same `frameNumber`
   - invalid values of `ProjectionType` / `SelfShadowMode`
   - out-of-range values in `ControlPointSet`
@@ -333,12 +337,49 @@ std::string toUTF8() const;
 
 std::string toUTF8ForDisplay(bool pStopAtNul = true) const;
 
-std::size_t shiftJISByteSize() const noexcept;
+std::size_t sizeofShiftJISBytes() const noexcept;
 
 const std::vector<std::byte> &shiftJISBytes() const noexcept;
 ```
 
 <br>Headers such as `model_edit.h` include `vmd_string.h` because their public structures expose `VMDString` fields. However, user code should include `vmd_string.h` explicitly when it directly constructs or converts `VMDString` values. This makes the dependency visible in user code and avoids relying on transitive includes.
+
+<br>
+
+#### Python wrapper behavior
+
+In the Python wrapper, `VMDString` is exposed as `pyvmdio.VMDString` and `pyvmdio.vmd_string.VMDString`.
+
+Python VMD string fields accept `str`, `bytes`, or `VMDString` values:
+
+```python
+import pyvmdio.model_edit as vmdio
+from pyvmdio.vmd_string import VMDString
+
+frame = vmdio.MotionFrame()
+
+frame.boneName = "センター"                                      # Python str
+frame.boneName = "センター".encode("utf-8")                     # UTF-8 bytes
+frame.boneName = VMDString.fromUTF8("センター")                 # explicit VMDString
+frame.boneName = VMDString.fromShiftJIS("センター".encode("cp932"))  # raw Shift_JIS bytes
+```
+
+<br>`str` and UTF-8 `bytes` are converted to `VMDString` at assignment time. If the text cannot be represented in `Shift_JIS`, `pyvmdio.exceptions.StringProcessError` is raised.
+
+To use raw `Shift_JIS` bytes, do not assign `bytes` directly to a string field. Explicitly construct a `VMDString` with `VMDString.fromShiftJIS()`.
+
+Field byte-length limits are not checked at assignment time. They are checked when `writeVMD()` serializes the data, matching the C++ API design.
+
+`VMDString.toShiftJIS()` returns Python `bytes`, while `VMDString.toUTF8()` and `VMDString.toUTF8ForDisplay()` return Python `str`.
+
+```python
+name = VMDString.fromUTF8("センター")
+
+shift_jis_bytes = name.toShiftJIS()
+display_text = name.toUTF8ForDisplay()
+```
+
+<br>Python frame list classes are backed by C++ `std::vector`. Do not keep references to elements obtained from a list, such as `frame = data.motionFrames[0]`, while mutating the same list with `append`, `insert`, `extend`, `remove`, `clear`, or similar operations. After mutating a list, retrieve the element again from the list.
 
 <br>
 
@@ -354,7 +395,24 @@ std::string shiftJISToUTF8(std::string_view pString);
 
 These functions are used internally by the library for conversions between `UTF-8` and `Shift_JIS`. They can also be used directly by library users when needed.
 
-`VMDString::fromUTF8()` uses `UTF-8` to `Shift_JIS` conversion internally. `VMDString::toUTF8()` and `VMDString::toUTF8ForDisplay()` use `Shift_JIS` to `UTF-8` conversion internally, with `toUTF8ForDisplay()` replacing invalid or incomplete byte sequences with `?`.
+In the C++ API, both UTF-8 text and Shift_JIS encoded byte sequences are represented by `std::string`. Therefore, the semantic meaning of the string depends on the function:
+
+- `utf8ToShiftJIS()` accepts UTF-8 text and returns Shift_JIS encoded bytes as `std::string`.
+- `shiftJISToUTF8()` accepts Shift_JIS encoded bytes as `std::string` and returns UTF-8 text.
+
+`VMDString::fromUTF8()` uses UTF-8 to Shift_JIS conversion internally. `VMDString::toUTF8()` and `VMDString::toUTF8ForDisplay()` use Shift_JIS to UTF-8 conversion internally, with `toUTF8ForDisplay()` replacing invalid or incomplete byte sequences with `?`.
+
+In the Python wrapper, this distinction is represented with Python's `str` and `bytes` types:
+
+```python
+import pyvmdio.encoding as encoding
+
+shift_jis_bytes = encoding.utf8ToShiftJIS("センター")                  # str -> bytes
+shift_jis_bytes = encoding.utf8ToShiftJIS("センター".encode("utf-8"))  # UTF-8 bytes -> bytes
+text = encoding.shiftJISToUTF8(shift_jis_bytes)                       # bytes -> str
+```
+
+In Python, `encoding.utf8ToShiftJIS()` accepts either `str` or UTF-8 encoded `bytes` and returns `Shift_JIS` `bytes`. `encoding.shiftJISToUTF8()` accepts `Shift_JIS` `bytes` and returns `str`.
 
 <br>
 
