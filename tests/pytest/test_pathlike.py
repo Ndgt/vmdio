@@ -4,7 +4,7 @@ import pyvmdio.model_edit as vmdio
 def test_readvmd_accepts_pathlib_path(test_motion_data_dir):
     src = test_motion_data_dir / "motion_morph_visibleik.vmd"
     data = vmdio.readVMD(src)
-    assert data.modelName
+    assert data.modelName.toUTF8ForDisplay()
 
 
 def test_writevmd_accepts_pathlib_path(temp_vmd_path):

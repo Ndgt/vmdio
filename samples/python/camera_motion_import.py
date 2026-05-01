@@ -4,36 +4,36 @@
 
 from pathlib import Path
 import argparse
+import sys
 import pyvmdio.camera_edit as vmdio
 import pyvmdio.exceptions as vmdio_exceptions
 
 
-def print_summary_data(vmd_data: vmdio.VMDData):
-    print(f"\n=== Summary of imported data ===")
-
-    # Note:
-    # The vectors of frame data structures in the `VMDData` structure are defined
-    # as custom list types (e.g., 'CameraFrameList'). This is because to implement
-    # the referencing behavior of the frame data structures in Python, we need to
-    # use `PYBIND11_MAKE_OPAQUE` to make the vector types opaque to pybind11, and
-    # then define custom list types that wrap around these opaque vector types.
-
+def print_summary_data(vmd_data: vmdio.VMDData) -> None:
+    print("\n=== Summary of imported data ===")
     print(f"Camera Frame Count: {len(vmd_data.cameraFrames)}")
     print(f"Light Frame Count: {len(vmd_data.lightFrames)}")
     print(f"Self Shadow Frame Count: {len(vmd_data.selfShadowFrames)}")
 
+    # Note:
+    # Frame lists such as cameraFrames, lightFrames, and selfShadowFrames
+    # are list-like wrappers around C++ std::vector.
+    # You can iterate over them and append frames, but do not keep a frame object
+    # obtained from a list while changing the same list with append/insert/remove/clear.
+    # After changing the list, get the frame again from the list.
 
-def print_camera_frames(vmd_data: vmdio.VMDData):
-    if(len(vmd_data.cameraFrames) == 0):
+def print_camera_frames(vmd_data: vmdio.VMDData) -> None:
+    if len(vmd_data.cameraFrames) == 0:
         return
-    
-    print(f"\n=== Camera Frames ===")
+
+    print("\n=== Camera Frames ===")
 
     for camera_frame in vmd_data.cameraFrames:
         pos = camera_frame.position
         rot = camera_frame.rotation
         interp = camera_frame.interpolation
         projection_type_str = "Unknown"
+
         match camera_frame.projectionType:
             case vmdio.ProjectionType.Perspective:
                 projection_type_str = "Perspective"
@@ -46,7 +46,7 @@ def print_camera_frames(vmd_data: vmdio.VMDData):
         print(f"  Distance: {camera_frame.distance}")
         print(f"  Viewing Angle: {camera_frame.viewingAngle}")
         print(f"  Projection Type: {projection_type_str}")
-        print(f"  Interpolation:")
+        print("  Interpolation:")
         print(f"     X Position:    ({interp.xPos.x1}, {interp.xPos.y1}, {interp.xPos.x2}, {interp.xPos.y2})")
         print(f"     Y Position:    ({interp.yPos.x1}, {interp.yPos.y1}, {interp.yPos.x2}, {interp.yPos.y2})")
         print(f"     Z Position:    ({interp.zPos.x1}, {interp.zPos.y1}, {interp.zPos.x2}, {interp.zPos.y2})")
@@ -56,11 +56,11 @@ def print_camera_frames(vmd_data: vmdio.VMDData):
         print()
 
 
-def print_light_frames(vmd_data: vmdio.VMDData):
-    if(len(vmd_data.lightFrames) == 0):
+def print_light_frames(vmd_data: vmdio.VMDData) -> None:
+    if len(vmd_data.lightFrames) == 0:
         return
-    
-    print(f"\n=== Light Frames ===")
+
+    print("\n=== Light Frames ===")
 
     for light_frame in vmd_data.lightFrames:
         print(f"Light Frame: {light_frame.frameNumber}")
@@ -69,14 +69,15 @@ def print_light_frames(vmd_data: vmdio.VMDData):
         print()
 
 
-def print_selfshadow_frames(vmd_data: vmdio.VMDData):
-    if(len(vmd_data.selfShadowFrames) == 0):
+def print_selfshadow_frames(vmd_data: vmdio.VMDData) -> None:
+    if len(vmd_data.selfShadowFrames) == 0:
         return
 
-    print(f"\n=== Self Shadow Frames ===")
+    print("\n=== Self Shadow Frames ===")
 
     for shadow_frame in vmd_data.selfShadowFrames:
         mode_str = "Unknown"
+
         match shadow_frame.mode:
             case vmdio.SelfShadowMode.NoSelfShadow:
                 mode_str = "No Self Shadow"
@@ -91,27 +92,27 @@ def print_selfshadow_frames(vmd_data: vmdio.VMDData):
         print()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("vmd_file_path", type=str, help="Path to the VMD file to import")
+    parser.add_argument("vmd_file_path", type=str, help="Path to the camera-edit VMD file to import")
     parser.add_argument("-v", action="store_true", help="Print all frame data of the imported VMD file")
     args = parser.parse_args()
 
-    if not Path(args.vmd_file_path).is_file():
-        raise ValueError(f"File not found: {args.vmd_file_path}")
-
     vmd_file = Path(args.vmd_file_path)
+
+    if not vmd_file.is_file():
+        raise FileNotFoundError(f"File not found: {vmd_file}")
 
     if vmd_file.suffix.lower() != ".vmd":
         raise ValueError(f"Invalid file type: {vmd_file.suffix}. Expected a .vmd file.")
 
-    # Read VMD file and populate data structure
+    # Read a camera edit VMD file and populate the camera_edit.VMDData structure
     vmd_data = vmdio.readVMD(vmd_file)
 
-    # Print the summary of the imported data
+    # Print the summary of the imported data.
     print_summary_data(vmd_data)
 
-    # Print all frames for each type of data if -v flag is set
+    # Print all frames for each type of data if the -v flag is set
     if args.v:
         print_camera_frames(vmd_data)
         print_light_frames(vmd_data)
@@ -124,8 +125,10 @@ if __name__ == "__main__":
 
     # Catch pyvmdio exceptions
     except vmdio_exceptions.VMDIOError as e:
-        print(f"vmdio library threw an error: {e}")
+        print(f"vmdio library threw an error: {e}", file=sys.stderr)
+        raise SystemExit(1)
 
     # Catch any other exceptions
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        raise SystemExit(1)

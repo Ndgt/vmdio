@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "vmd_string.h"
+
 /**
  * @namespace vmdio::model_edit
  * @brief Namespace for all data structures and functions related to model, morph, and visible IK
@@ -102,7 +104,7 @@ namespace vmdio::model_edit
     struct MotionFrame
     {
         ///< Name of the bone
-        std::string boneName;
+        vmdio::VMDString boneName;
 
         ///< Frame number
         uint32_t frameNumber = 0;
@@ -129,7 +131,7 @@ namespace vmdio::model_edit
     struct MorphFrame
     {
         ///< Name of the morph
-        std::string morphName;
+        vmdio::VMDString morphName;
 
         ///< Frame number
         uint32_t frameNumber = 0;
@@ -145,7 +147,7 @@ namespace vmdio::model_edit
     struct IKData
     {
         ///< Name of the IK bone
-        std::string ikBoneName;
+        vmdio::VMDString ikBoneName;
 
         ///< IK state (default: ON)
         IKState ikState = IKState::ON;
@@ -170,14 +172,12 @@ namespace vmdio::model_edit
     /**
      * @struct VMDData
      * @brief Struct representing the content of a model edit VMD file.
-     * @note All string fields in this class are stored in UTF-8 encoding. model_edit::readVMD and
-     *       model_edit::writeVMD functions will handle the conversion between UTF-8 and Shift_JIS
-     *       encoding when reading from and writing to VMD files.
+     * @note String fields are stored as VMDString, which keeps the Shift_JIS byte sequence.
      */
     struct VMDData
     {
         ///< Name of the model
-        std::string modelName;
+        vmdio::VMDString modelName;
 
         ///< List of motion frames
         std::vector<MotionFrame> motionFrames;
@@ -191,10 +191,12 @@ namespace vmdio::model_edit
 
     /**
      * @brief Reads a VMD file and returns a VMDData structure.
-     * @returns A VMDData structure containing the data read from the specified VMD file.
+     * @return A VMDData structure containing the data read from the specified VMD file.
      * @param pFilePath The path to the VMD file to read.
      * @throws vmdio::exceptions::FileSystemError If the file does not exist, cannot be opened, or
      *         an I/O error occurs.
+     * @throws vmdio::exceptions::FrameOverflowError If the file contains more frames than the
+     *         maximum allowed limit.
      * @throws vmdio::exceptions::IncompatibleFormatError If the file extension is not .vmd,
      *         the header is invalid, the file is for camera edit instead of model edit, or
      *         the file ends unexpectedly.
@@ -202,7 +204,7 @@ namespace vmdio::model_edit
      *         (e.g., out-of-range flags or enum values).
      * @throws vmdio::exceptions::StringProcessError If there is an error during encoding
      *         conversion of string fields.
-     * @note This function will populate string fields in pVmdData with UTF-8 encoded strings.
+     * @note This function will populate string fields in the returned VMDData as VMDString.
      */
     VMDData readVMD(const std::filesystem::path &pFilePath);
 
@@ -224,7 +226,6 @@ namespace vmdio::model_edit
      * @throws vmdio::exceptions::StringProcessError If there is an error during encoding
      *         conversion of string fields.
      * @note This function will overwrite the file if it already exists.
-     * @note This function will write string data from pVmdData in Shift_JIS encoding.
      * @note For model_edit::MotionFrame::rotation, if the quaternion is non-zero but not
      *       normalized, this function normalizes it internally during serialization.
      *       The input VMDData object itself is not modified.

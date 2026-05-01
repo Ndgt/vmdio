@@ -1,17 +1,17 @@
-#include "encoding.h"
+#include "vmd_encoding.h"
 
 #include <windows.h>
 
-#include "exceptions.h"
+#include "vmd_exceptions.h"
 
 namespace
 {
-    inline std::string fromUtf16(std::wstring_view pUtf16String, UINT pCodePage)
+    inline std::string fromUTF16(std::wstring_view pUTF16String, UINT pCodePage)
     {
-        if (pUtf16String.empty())
+        if (pUTF16String.empty())
             return {};
 
-        if (pUtf16String.size() > static_cast<size_t>(INT_MAX))
+        if (pUTF16String.size() > static_cast<size_t>(INT_MAX))
             throw vmdio::exceptions::StringProcessError("Input string is too large to process.");
 
         // Use WC_ERR_INVALID_CHARS flag for UTF-8 encoding to ensure that the function fails
@@ -21,7 +21,7 @@ namespace
         // Calculate the required buffer size for the encoded string
         int lRequiredSizeInBytes = WideCharToMultiByte(
             pCodePage, lDwFlags,
-            pUtf16String.data(), static_cast<int>(pUtf16String.size()),
+            pUTF16String.data(), static_cast<int>(pUTF16String.size()),
             nullptr, 0,
             nullptr, nullptr);
 
@@ -41,7 +41,7 @@ namespace
         // Convert the UTF-16 string to the specified encoding
         int lWrittenLength = WideCharToMultiByte(
             pCodePage, lDwFlags,
-            pUtf16String.data(), static_cast<int>(pUtf16String.size()),
+            pUTF16String.data(), static_cast<int>(pUTF16String.size()),
             lEncodedString.data(), lRequiredSizeInBytes,
             nullptr, lLpUsedDefaultChar);
 
@@ -61,7 +61,7 @@ namespace
         return lEncodedString;
     }
 
-    inline std::wstring toUtf16(std::string_view pEncodedString, UINT pCodePage)
+    inline std::wstring toUTF16(std::string_view pEncodedString, UINT pCodePage)
     {
         if (pEncodedString.empty())
             return {};
@@ -107,11 +107,11 @@ namespace vmdio::encoding
 {
     std::string utf8ToShiftJIS(std::string_view pString)
     {
-        return fromUtf16(toUtf16(pString, CP_UTF8), 932);
+        return fromUTF16(toUTF16(pString, CP_UTF8), 932);
     }
 
     std::string shiftJISToUTF8(std::string_view pString)
     {
-        return fromUtf16(toUtf16(pString, 932), CP_UTF8);
+        return fromUTF16(toUTF16(pString, 932), CP_UTF8);
     }
 }

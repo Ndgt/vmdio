@@ -1,6 +1,6 @@
 #include <vmdio/model_edit.h>
 #include <vmdio/camera_edit.h>
-#include <vmdio/exceptions.h>
+#include <vmdio/vmd_exceptions.h>
 
 #include "test_base.h"
 
@@ -22,7 +22,7 @@ TEST_F(FormatMismatchTest, ReadCameraEditVmdWithModelEditReader)
 TEST_F(FormatMismatchTest, WriteCameraEditModelNameWithModelEditWriter)
 {
     vmd_model::VMDData lBadData;
-    lBadData.modelName = "カメラ・照明";
+    lBadData.modelName = test_base::makeVMDString(u8"カメラ・照明");
 
     EXPECT_THROW(
         vmd_model::writeVMD(lBadData, mTempFilePath), vmd_except::IncompatibleFormatError);

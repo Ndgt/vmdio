@@ -199,10 +199,12 @@ namespace vmdio::camera_edit
 
     /**
      * @brief Reads a VMD file and returns a VMDData structure.
-     * @returns A VMDData structure containing the data read from the specified VMD file.
+     * @return A VMDData structure containing the data read from the specified VMD file.
      * @param pFilePath The path to the VMD file to read.
      * @throws vmdio::exceptions::FileSystemError If the file does not exist, cannot be opened,
      *         or an I/O error occurs.
+     * @throws vmdio::exceptions::FrameOverflowError If the file contains more frames than the
+     *         maximum allowed limit.
      * @throws vmdio::exceptions::IncompatibleFormatError If the file extension is not .vmd,
      *         the header is invalid, the file is for model edit instead of camera edit, or
      *         the file ends unexpectedly.

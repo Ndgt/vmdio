@@ -3,12 +3,12 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
-#include "encoding.h"
-#include "exceptions.h"
+#include "vmd_exceptions.h"
+#include "vmd_string.h"
 #include "private/vmd_constants.h"
 
 namespace vmdio::internal
@@ -40,57 +40,41 @@ namespace vmdio::internal
         pStream.write(lHeaderStr, sizeof(lHeaderStr));
     }
 
-    inline std::string readStringField(
-        std::ifstream &pStream, std::size_t pFieldSize, std::string_view pLabel)
+    inline VMDString readStringField(std::ifstream &pStream, std::size_t pFieldSize)
     {
         std::string lBuffer(pFieldSize, '\0');
-        pStream.read(lBuffer.data(), lBuffer.size());
 
-        const std::size_t lActualSize = lBuffer.find('\0');
-        const std::string_view lStringShiftJIS(
-            lBuffer.data(), (lActualSize == std::string::npos) ? lBuffer.size() : lActualSize);
+        if (pFieldSize != 0)
+            pStream.read(lBuffer.data(), static_cast<std::streamsize>(lBuffer.size()));
 
-        try
-        {
-            // Convert from Shift JIS to UTF-8
-            return encoding::shiftJISToUTF8(lStringShiftJIS);
-        }
-        catch (const exceptions::StringProcessError &e)
-        {
-            throw exceptions::StringProcessError(
-                std::string(pLabel) + " could not be decoded from Shift JIS. " + e.what());
-        }
+        const std::size_t lNulPosition = lBuffer.find('\0');
+
+        if (lNulPosition != std::string::npos)
+            lBuffer.resize(lNulPosition);
+
+        return VMDString::fromShiftJIS(lBuffer);
     }
 
     inline void writeStringField(
-        std::ofstream &pStream, std::string_view pStringUTF8, std::size_t pFieldSize,
+        std::ofstream &pStream, const VMDString &pString, std::size_t pFieldSize,
         std::string_view pLabel)
     {
-        std::string lStringShiftJIS;
+        const std::vector<std::byte> &lBytes = pString.shiftJISBytes();
 
-        try
-        {
-            // Convert from UTF-8 to Shift JIS
-            lStringShiftJIS = encoding::utf8ToShiftJIS(pStringUTF8);
+        if (lBytes.size() > pFieldSize)
+            throw exceptions::InvalidFieldValueError(
+                std::string(pLabel) +
+                " exceeds the field size limit of " + std::to_string(pFieldSize) +
+                " bytes. Actual byte size: " + std::to_string(lBytes.size()));
 
-            if (lStringShiftJIS.size() > pFieldSize)
-            {
-                throw exceptions::InvalidFieldValueError(
-                    std::string(pLabel) +
-                    " exceeds the field size limit of " + std::to_string(pFieldSize) +
-                    " bytes when encoded in Shift JIS. Actual byte size: " +
-                    std::to_string(lStringShiftJIS.size()));
-            }
+        std::vector<std::byte> lBuffer(pFieldSize, std::byte{0});
 
-            std::string lBuffer(pFieldSize, '\0');
-            std::memcpy(lBuffer.data(), lStringShiftJIS.data(), lStringShiftJIS.size());
-            pStream.write(lBuffer.data(), lBuffer.size());
-        }
-        catch (const exceptions::StringProcessError &e)
-        {
-            throw exceptions::StringProcessError(
-                std::string(pLabel) + " could not be encoded to Shift JIS. " + e.what());
-        }
+        if (!lBytes.empty())
+            std::memcpy(lBuffer.data(), lBytes.data(), lBytes.size());
+
+        pStream.write(
+            reinterpret_cast<const char *>(lBuffer.data()),
+            static_cast<std::streamsize>(lBuffer.size()));
     }
 
     inline void readFlagValue(std::ifstream &pStream, uint8_t &pFlag)

@@ -1,14 +1,15 @@
 import math
 
 import pyvmdio.model_edit as vmdio
+from pyvmdio.vmd_string import VMDString
 
 
 def test_non_unit_quaternion_is_normalized_on_write(temp_vmd_path):
     data = vmdio.VMDData()
-    data.modelName = "vmdio-test"
+    data.modelName = VMDString.fromUTF8("vmdio-test")
 
     frame = vmdio.MotionFrame()
-    frame.boneName = "ボーン1"
+    frame.boneName = VMDString.fromUTF8("ボーン1")
 
     frame.rotation.qx = 0.0
     frame.rotation.qy = 0.0
