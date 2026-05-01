@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Doxygen
         run: |
-          $utl = "https://github.com/doxygen/doxygen/releases/latest/download/doxygen-1.16.1.windows.x64.bin.zip"
+          $utl = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.windows.x64.bin.zip"
           Invoke-WebRequest -Uri $utl -OutFile doxygen.zip
           Expand-Archive -Path doxygen.zip -DestinationPath doxygen
           echo "$pwd\doxygen" >> $env:GITHUB_PATH
