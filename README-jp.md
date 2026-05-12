@@ -42,9 +42,12 @@ cd vmdio
 
 プロジェクト設定時に使用可能な CMake Option は以下の通りです。詳細は [CMakeLists.txt](/CMakeLists.txt) を参照してください。
 
-* `BUILD_CPP_SAMPLES` : C++ sample application をビルドする（default: `OFF`）
-* `BUILD_CTEST` : CTest をビルドする（default: `OFF`。`GoogleTest` が自動取得されます）
-* `BUILD_PYTHON_WRAPPER` : Python wrapper module と wheel をビルドする（default: `OFF`）
+- `BUILD_CPP_SAMPLES` : C++ sample application をビルドする（default: `OFF`）
+
+- `BUILD_CTEST` : CTest をビルドする（default: `OFF`。`GoogleTest` が自動取得されます）
+
+- `BUILD_PYTHON_WRAPPER` : Python wrapper module と wheel をビルドする（default: `OFF`）
+- `BUILD_WITH_STATIC_CRT` : ランタイムライブラリのオプションとして `/MT` および `/MTd` を使用する（default: `OFF`。`BUILD_PYTHON_WRAPPER` と併用不可）
 
 <br>
 
@@ -56,9 +59,13 @@ cmake -S . -B build -A x64 -T v143
 cmake --build build --config Release
 ```
 
-<br>
+<br>デフォルトでは、`/MD` および `/MDd` を使用してビルドされます。`/MT` および `/MTd` を使用してビルドするには、`BUILD_WITH_STATIC_CRT` オプションを `ON` に設定してください。
 
-`BUILD_CTEST` を `ON` にした場合、CTest をビルド・実行できます。
+```
+cmake -S . -B build -A x64 -T v143 -DBUILD_WITH_STATIC_CRT=ON
+```
+
+<br>`BUILD_CTEST` を `ON` にした場合、CTest をビルド・実行できます。
 
 ```
 ctest --test-dir build/tests/ctest -C Release -V
