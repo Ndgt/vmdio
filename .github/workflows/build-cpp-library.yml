@@ -10,11 +10,20 @@ jobs:
   build:
     runs-on: windows-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        crt:
+          - name: md
+            cmake-option: ""
+          - name: mt
+            cmake-option: "-DBUILD_WITH_STATIC_CRT=ON"
+
     steps:
       - uses: actions/checkout@v6
 
       - name: Configure
-        run: cmake -S . -B ${{github.workspace}}/build -A x64 -T v143 -DBUILD_CTEST=ON
+        run: cmake -S . -B ${{github.workspace}}/build -A x64 -T v143 -DBUILD_CTEST=ON ${{matrix.crt.cmake-option}}
 
       - name: Build Debug
         run: cmake --build ${{github.workspace}}/build --config Debug
@@ -23,7 +32,7 @@ jobs:
         run: cmake --build ${{github.workspace}}/build --config Release
 
       - name: Run tests on Debug
-        run: ctest --test-dir ${{github.workspace}}/build -C Debug -V
+        run: ctest --test-dir ${{github.workspace}}/build/tests/ctest -C Debug -V
 
       - name: Run tests on Release
         run: ctest --test-dir ${{github.workspace}}/build/tests/ctest -C Release -V
@@ -47,5 +56,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: vmdio-v${{steps.extract_version.outputs.version}}
+          name: vmdio-v${{steps.extract_version.outputs.version}}-${{matrix.crt.name}}
           path: ${{github.workspace}}/install/

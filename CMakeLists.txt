@@ -22,7 +22,6 @@ include(GNUInstallDirs)
 # ------------------------------------
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_DEBUG_POSTFIX d)
 set(CACHE{FETCHCONTENT_BASE_DIR} TYPE PATH FORCE VALUE "${CMAKE_CURRENT_SOURCE_DIR}/_deps")
 
@@ -32,6 +31,17 @@ set(CACHE{FETCHCONTENT_BASE_DIR} TYPE PATH FORCE VALUE "${CMAKE_CURRENT_SOURCE_D
 option(BUILD_CTEST "Build CTest tests" OFF)
 option(BUILD_CPP_SAMPLES "Build C++ sample applications" OFF)
 option(BUILD_PYTHON_WRAPPER "Build Python Wrapper module and wheel" OFF)
+option(BUILD_WITH_STATIC_CRT "Link with static CRT (/MT) instead of dynamic CRT (/MD)" OFF)
+
+if(BUILD_PYTHON_WRAPPER AND BUILD_WITH_STATIC_CRT)
+    message(FATAL_ERROR "BUILD_WITH_STATIC_CRT is not supported with BUILD_PYTHON_WRAPPER.")
+endif()
+
+if(BUILD_WITH_STATIC_CRT)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
 
 # ------------------------------------
 # vmdio library

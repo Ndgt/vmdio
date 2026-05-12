@@ -44,6 +44,8 @@ cd vmdio
 
 - `BUILD_PYTHON_WRAPPER` : Build Python Wrapper module and wheel (default: `OFF`)
 
+- `BUILD_WITH_STATIC_CRT` : Use `/MT` or `/MTd` as the runtime library option (default: `OFF`. Not supported with `BUILD_PYTHON_WRAPPER`)
+
 <br>
 
 ### 2.1. Build C++ Library (`vmdio`)
@@ -51,6 +53,12 @@ When configuring the project with CMake, set the toolset version to match your V
 
 ```
 cmake -S . -B build -A x64 -T v143
+```
+
+<br>By default, the library is built with `/MD` or `/MDd`. To build with `/MT` or `/MTd`, set the `BUILD_WITH_STATIC_CRT` option to `ON`:
+
+```
+cmake -S . -B build -A x64 -T v143 -DBUILD_WITH_STATIC_CRT=ON
 ```
 
 <br>Then, choose the build configuration (e.g., `Release`) and run the build command:
